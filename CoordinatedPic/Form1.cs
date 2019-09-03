@@ -16,11 +16,13 @@ namespace CoordinatedPic
             //Author:张凯翔
             //copyright 2019
             //allrightsreserved
+            //更新日志：新增折线功能，更加方便实用；另增加Z坐标及钻头速度的GUI，后续需给定SDK才可完成。
 
         public Form1()
         {
             InitializeComponent();
         }
+        private string selection;
         private int x, y,x1,y1;//初始化鼠标坐标值
         private bool Drawable=false;
         private int ScreenWidth = Screen.PrimaryScreen.Bounds.Width;
@@ -35,52 +37,71 @@ namespace CoordinatedPic
             XCoordination.Maximum = XCoordination.Width;
             YCoordination.Maximum = YCoordination.Height;
         }//设置UI自适应缩放
+        private int movingX, movingY;
         private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
         {
-            if (Drawable == false)
+            if (selection == null)
             {
-                x = e.X; y = pictureBox1.Height - e.Y;
-
-                MouseOverCoordination.Text = x + "," + y;
+                MouseOverCoordination.Text = e.X + "," + (pictureBox1.Height - e.Y);
+                movingX = e.X;movingY = pictureBox1.Height - e.Y;
                 return;
             }
-            x1 = e.X;
-            y1 = pictureBox1.Height - e.Y;
-            g = pictureBox1.CreateGraphics();
-            MouseOverCoordination.Text = x + "," + y;
-            MouseClickedCoordinationX.Text = Convert.ToString(x); MouseClickedCoordinationY.Text = Convert.ToString(y);
-            g.DrawLine(new Pen(Color.Black), x,pictureBox1.Height - y, x1, pictureBox1.Height - y1);
-            x = e.X;y = pictureBox1.Height-e.Y;
-            MouseOverCoordination.Text = x1 + "," + y1;
-            MouseClickedCoordinationX.Text = Convert.ToString(x1);
-            MouseClickedCoordinationY.Text = Convert.ToString(y1);
-        }//划线
+            if (selection == "Free Curve")
+            {
+                this.Cursor = Cursors.Default;
+                if (Drawable == false)
+                {
+                    MouseOverCoordination.Text = e.X.ToString()+","+((pictureBox1.Height-e.Y).ToString());
+                    return;
+                }
+                x1 = e.X;
+                y1 = pictureBox1.Height - e.Y;
+                g = pictureBox1.CreateGraphics();
+                MouseOverCoordination.Text = x + "," + y;
+                MouseClickedCoordinationX.Text = Convert.ToString(x); MouseClickedCoordinationY.Text = Convert.ToString(y);
+                g.DrawLine(new Pen(Color.Black), x, pictureBox1.Height - y, x1, pictureBox1.Height - y1);
+                x = e.X; y = pictureBox1.Height - e.Y;
+                MouseOverCoordination.Text = x1 + "," + y1;
+                MouseClickedCoordinationX.Text = Convert.ToString(x1);
+                MouseClickedCoordinationY.Text = Convert.ToString(y1);
+            }
+            if(selection=="Polyline")
+            {
+                this.Cursor = Cursors.Cross;
+                MouseOverCoordination.Text = e.X.ToString()  + "," + (pictureBox1.Height - e.Y).ToString();
+            }
+        }//划线&鼠标滑过
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
         {
-            Drawable = true;
-            x = e.X;
-            y = pictureBox1.Height - e.Y;
-            ClearPenwrote();
+            if (selection == null) { return; }
+            if (selection != string.Empty)
+            {
+                Drawable = true;
+                x = e.X;
+                y = pictureBox1.Height - e.Y;
+                ClearPenwrote();
+                MouseClickedCoordinationX.Text = x.ToString();
+                MouseClickedCoordinationY.Text = y.ToString();
+            }
         }//鼠标按下动作
         private void pictureBox1_MouseUp(object sender, MouseEventArgs e)
         {
-            Drawable = false;
+            if (selection == null) { return;}
+            if (selection !=null)
+            { Drawable = false; }
         }//鼠标松开动作
         private void YCoordination_ValueChanged(object sender, EventArgs e)
         {
-            y1 = YCoordination.Value;
-            MouseClickedCoordinationY.Text = Convert.ToString(y1);
-            MouseOverCoordination.Text = x + "," + y;
-            
-            DrawPoint();
+            y = YCoordination.Value;
+            MouseClickedCoordinationY.Text = Convert.ToString(y);
+            MouseOverCoordination.Text = x + "," + y;  
         }//Y坐标轴value改变
         private void XCoordination_ValueChanged(object sender, EventArgs e)
         {
-            x1 = XCoordination.Value;
-            MouseClickedCoordinationX.Text = Convert.ToString(x1);
+            x = XCoordination.Value;
+            MouseClickedCoordinationX.Text = Convert.ToString(x);
             MouseOverCoordination.Text = x + "," + y;
 
-            DrawPoint();
         }//X坐标轴value改变
         private void ClearPenwrote()
         {
@@ -115,6 +136,63 @@ namespace CoordinatedPic
             pictureBox1.Height = SelectedPic.Height;
             pictureBox1.BackgroundImage = SelectedPic;
         }//选取完毕
+        private bool Clicked;
+        private void pictureBox1_Click(object sender, EventArgs e)
+        {
+            ClearPenwrote();
+            if (selection == "Polyline")
+            {
+                g = pictureBox1.CreateGraphics();
+                if (Clicked == false)
+                {
+                    g.FillEllipse(new SolidBrush(Color.Black),x,pictureBox1.Height-y,2,2);
+                    x1 = x;y1 = y;
+                    Clicked = true;
+                    XCoordination.Value = x;
+                    YCoordination.Value = y;
+                }
+                if (Clicked == true)
+                {
+                    g.FillEllipse(new SolidBrush(Color.Black), x, pictureBox1.Height-y, 2, 2);
+                    g.DrawLine(new Pen(Color.Black), x,pictureBox1.Height-y, x1,pictureBox1.Height-y1);
+                    x1 = x;y1 = y;
+                    XCoordination.Value = x;
+                    YCoordination.Value = y;
+                }
+            }
+            if (selection == "Free Curve")
+            {
+                DrawPoint(x, y);
+                XCoordination.Value = x;
+                YCoordination.Value = y;
+            }
+            if(selection==null)
+            {
+                DrawPoint(movingX, movingY);
+                XCoordination.Value = movingX;
+                YCoordination.Value = movingY;
+            }
+        }//画折线
+        private void Polyline_CheckedChanged(object sender, EventArgs e)
+        {
+            if ((!FreeCurve.Checked) & (!(Polyline.Checked))) { return; }
+            if (FreeCurve.Checked & (!(Polyline.Checked))) { selection = "Free Curve"; }
+            if ((!FreeCurve.Checked) & Polyline.Checked) { selection = "Polyline"; }
+            Clicked = false;
+        }
+        private void FreeCurve_CheckedChanged(object sender, EventArgs e)
+        {
+            if ((!FreeCurve.Checked) & (!(Polyline.Checked))) { return; }
+            if (FreeCurve.Checked &(!( Polyline.Checked))) { selection = "Free Curve"; }
+            if ((!FreeCurve.Checked) & Polyline.Checked) { selection = "Polyline"; }
+            Clicked = false;
+        }//radiobutton的选择
+        /*private int PicWid, PicHeight, Form1Wid, Form1Heitht;
+private double Ratio_Width, Ratio_Height;*/
+        private void pictureBox1_MouseLeave(object sender, EventArgs e)
+        {
+            this.Cursor = Cursors.Default;
+        }
         private void Locate_Click(object sender, EventArgs e)
         {
             ClearPenwrote();
@@ -135,22 +213,62 @@ namespace CoordinatedPic
             x = Convert.ToInt32(MouseClickedCoordinationX.Text);
             MouseClickedCoordinationY.Text = Convert.ToString(y);
             MouseClickedCoordinationX.Text = Convert.ToString(x);
-            DrawPoint();
+            if (Clicked== false)
+            {
+                DrawPoint(x, y);
+                x1 = x;y1 = y;
+                if (selection == "Polyline") { Clicked = true; }
+                YCoordination.Value = y;
+                XCoordination.Value = x;
+            }
+            if (Clicked == true)
+            {
+                DrawPoint(x, y);
+                g = pictureBox1.CreateGraphics();
+                g.DrawLine(new Pen(Color.Black), x1, pictureBox1.Height - y1, x, pictureBox1.Height - y);
+                x1 = x;y1 = y;
+                Clicked = true;
+                XCoordination.Value = x;
+                YCoordination.Value = y;
+            }
         }//手动输入坐标描点
-        private void pictureBox1_Click(object sender, EventArgs e)
-        {
-            MouseClickedCoordinationX.Text = Convert.ToString(x);
-            MouseClickedCoordinationY.Text = Convert.ToString(y);
-            //textBox显示鼠标点的坐标
-            x1 = x;y1 = y;
-            XCoordination.Value = x1;
-            YCoordination.Value = y1;//坐标轴改变value
-            DrawPoint();//描点     
-        }//图上描点
-        private void DrawPoint()
+        private void DrawPoint(int x,int y)
         {
             g = pictureBox1.CreateGraphics();
-            g.FillEllipse(Brushes.Black, x1, pictureBox1.Height - y1, 2, 2);
+            g.FillEllipse(Brushes.Black, x, pictureBox1.Height - y, 2, 2);
         }//描点函数
+        
+        #region SDK_Related
+        private void ZCoordination_ValueChanged(object sender, EventArgs e)
+        {
+            ZValue.Text = ZCoordination.Value.ToString();
+        }//Z坐标value改变
+
+        private void ZvalueOK_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                ZCoordination.Value = Convert.ToInt32(ZValue.Text);
+            }
+            catch 
+            {
+                return;
+            }
+        }//手动设置Z值
+
+        private void ZmaxOK_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                ZCoordination.Maximum = Convert.ToInt32(Zmax.Text);
+            }
+            catch
+            { 
+                return;
+            }
+        }//设置Z最大值}
+        #endregion////
+
+
     }
 }
