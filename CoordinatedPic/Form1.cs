@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -11,16 +12,23 @@ using System.Windows.Forms;
 
 namespace CoordinatedPic
 {
-    public partial class Form1 : Form
+    public partial class Form1 :Form
     {
             //Author:张凯翔
+            //Version2.1
             //copyright 2019
             //allrightsreserved
-            //更新日志：新增折线功能，更加方便实用；另增加Z坐标及钻头速度的GUI，后续需给定SDK才可完成。
+            //更新日志：新增鼠标滚轮缩放图片功能，UI自适应缩放更加智能
 
         public Form1()
         {
             InitializeComponent();
+            PicWid = this.pictureBox1.Width;
+            PicHeight = this.pictureBox1.Height;
+            Form1Wid = this.ClientSize.Width;
+            Form1Height = this.ClientSize.Height;
+            Ratio_Width = (double)Form1Wid / (double)PicWid;
+            Ratio_Height =(double) Form1Height /(double) PicHeight;
         }
         private string selection;
         private int x, y,x1,y1;//初始化鼠标坐标值
@@ -130,11 +138,14 @@ namespace CoordinatedPic
         }//选取文件
         private void openFileDialog1_FileOk(object sender, CancelEventArgs e)
         {
+            double PicWH_ratio;
             Image SelectedPic = Image.FromFile(@openFileDialog1.FileName);
-            pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
-            pictureBox1.Width = SelectedPic.Width;
-            pictureBox1.Height = SelectedPic.Height;
-            pictureBox1.BackgroundImage = SelectedPic;
+            pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
+            PicWH_ratio = (double)SelectedPic.Width / (double)SelectedPic.Height;
+            pictureBox1.Height =Convert.ToInt32(pictureBox1.Width / PicWH_ratio);
+            pictureBox1.Image = SelectedPic;
+            Ratio_Width = (double)Form1Wid / (double)pictureBox1.Width;
+            Ratio_Height = (double)Form1Height / (double)pictureBox1.Height;
         }//选取完毕
         private bool Clicked;
         private void pictureBox1_Click(object sender, EventArgs e)
@@ -187,8 +198,6 @@ namespace CoordinatedPic
             if ((!FreeCurve.Checked) & Polyline.Checked) { selection = "Polyline"; }
             Clicked = false;
         }//radiobutton的选择
-        /*private int PicWid, PicHeight, Form1Wid, Form1Heitht;
-private double Ratio_Width, Ratio_Height;*/
         private void pictureBox1_MouseLeave(object sender, EventArgs e)
         {
             this.Cursor = Cursors.Default;
@@ -232,6 +241,35 @@ private double Ratio_Width, Ratio_Height;*/
                 YCoordination.Value = y;
             }
         }//手动输入坐标描点
+
+        private void Form1_SizeChanged(object sender, EventArgs e)
+        {
+            this.Autosize();
+            Debug.WriteLine("Ratio_Height=" + Ratio_Height);
+            Debug.WriteLine("ratio_Wid=" + Ratio_Width);
+        }//窗体大小改变
+        private void picturebox1_MouseWheel(object sender,MouseEventArgs e)
+        {
+            int sigma = 10;
+            double rate = (double)pictureBox1.Width/ (double)pictureBox1.Height;
+            if (e.Delta > 0&XCoordination.Bottom<=MouseOverCoordination.Top)
+            {
+                pictureBox1.Width += sigma;
+                pictureBox1.Height = Convert.ToInt32(pictureBox1.Width / rate);
+            }
+            if (e.Delta < 0)
+            {
+                pictureBox1.Width -= sigma;
+                pictureBox1.Height = Convert.ToInt32(pictureBox1.Width / rate);
+            }
+            else { return; }
+        }//滚轮实现picturebox缩放
+
+        private void pictureBox1_MouseEnter(object sender, EventArgs e)
+        {
+            pictureBox1.Focus();
+        }//鼠标进入时设置焦点,以便滚轮运行
+
         private void DrawPoint(int x,int y)
         {
             g = pictureBox1.CreateGraphics();
